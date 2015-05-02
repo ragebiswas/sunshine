@@ -1,9 +1,11 @@
 package net.rajorshi.sunshine.app;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.text.format.Time;
 import android.util.Log;
@@ -16,6 +18,7 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -29,8 +32,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * A placeholder fragment containing a simple view.
@@ -57,11 +58,31 @@ public class ForecastFragment extends Fragment {
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
         if (id == R.id.action_refresh) {
-            FetchWeatherTask fetchWeatherTask = new FetchWeatherTask();
-            fetchWeatherTask.execute("94043");
+            updateWeather();
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void updateWeather() {
+        FetchWeatherTask fetchWeatherTask = new FetchWeatherTask();
+
+        SharedPreferences preferences =
+                PreferenceManager.getDefaultSharedPreferences(getActivity());
+        String location = preferences.getString(getString(R.string.pref_location_key),
+                getString(R.string.pref_location_default));
+        String units = preferences.getString(getString(R.string.pref_units_key),
+                getString(R.string.pref_units_default));
+
+        Toast.makeText(getActivity(), location + " " + units, Toast.LENGTH_LONG).show();
+
+        fetchWeatherTask.execute(location, units);
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        updateWeather();
     }
 
     @Override
@@ -70,18 +91,9 @@ public class ForecastFragment extends Fragment {
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
 
 
-        String[] data = {
-                "Mon 6/23 - Sunny - 31/17",
-                "Tue 6/24 - Foggy - 21/8",
-                "Wed 6/25 - Cloudy - 22/17",
-                "Thurs 6/26 - Rainy - 18/11",
-                "Fri 6/27 - Foggy - 21/10",
-                "Sat 6/28 - TRAPPED IN WEATHERSTATION - 23/18",
-                "Sun 6/29 - Sunny - 20/7"
-        };
-        List<String> weekForecast = new ArrayList<String>(Arrays.asList(data));
         mForeCastAdapter = new ArrayAdapter<String>(getActivity(),
-                R.layout.list_item_forecast, R.id.list_item_forecast_textview, weekForecast);
+                R.layout.list_item_forecast, R.id.list_item_forecast_textview,
+                new ArrayList<String>());
 
         ListView listView = (ListView) rootView.findViewById(R.id.listview_forecast);
         listView.setAdapter(mForeCastAdapter);
@@ -116,15 +128,27 @@ public class ForecastFragment extends Fragment {
             return shortenedDateFormat.format(time);
         }
 
+        private double convertCelciusToFahrenheit(double c) {
+            return (c * 9.0 / 5.0) + 32.0;
+        }
+
         /**
          * Prepare the weather high/lows for presentation.
          */
-        private String formatHighLows(double high, double low) {
+        private String formatHighLows(double high, double low, String units) {
             // For presentation, assume the user doesn't care about tenths of a degree.
+            String unit_str = "C";
+            if (units == getString(R.string.pref_units_imperial)) {
+                unit_str = "F";
+                // convert !
+                high = convertCelciusToFahrenheit(high);
+                low = convertCelciusToFahrenheit(low);
+            }
+
             long roundedHigh = Math.round(high);
             long roundedLow = Math.round(low);
 
-            String highLowStr = roundedHigh + "/" + roundedLow;
+            String highLowStr = roundedHigh + unit_str + "/" + roundedLow + unit_str;
             return highLowStr;
         }
 
@@ -135,7 +159,7 @@ public class ForecastFragment extends Fragment {
          * Fortunately parsing is easy:  constructor takes the JSON string and converts it
          * into an Object hierarchy for us.
          */
-        private String[] getWeatherDataFromJson(String forecastJsonStr, int numDays)
+        private String[] getWeatherDataFromJson(String forecastJsonStr, int numDays, String units)
                 throws JSONException {
 
             // These are the names of the JSON objects that need to be extracted.
@@ -194,7 +218,7 @@ public class ForecastFragment extends Fragment {
                 double high = temperatureObject.getDouble(OWM_MAX);
                 double low = temperatureObject.getDouble(OWM_MIN);
 
-                highAndLow = formatHighLows(high, low);
+                highAndLow = formatHighLows(high, low, units);
                 resultStrs[i] = day + " - " + description + " - " + highAndLow;
             }
 
@@ -210,6 +234,9 @@ public class ForecastFragment extends Fragment {
         protected String[] doInBackground(String... params) {
             if (params.length == 0) return null;
 
+            String location = params[0];
+            String units = params[1];
+
             // These two need to be declared outside the try/catch
             // so that they can be closed in the finally block.
             HttpURLConnection urlConnection = null;
@@ -224,7 +251,7 @@ public class ForecastFragment extends Fragment {
                 // http://openweathermap.org/API#forecast
                 Uri builtUri = Uri.parse(BASE_URL).buildUpon()
                         .appendQueryParameter("mode", "json")
-                        .appendQueryParameter("units", "metric")
+                        .appendQueryParameter("units", "metric") // always fetch metric
                         .appendQueryParameter("cnt", "7")
                         .appendQueryParameter("q", params[0])
                         .appendQueryParameter("APPID", "748cde420fe3fe44064530f3905eecca")
@@ -283,7 +310,7 @@ public class ForecastFragment extends Fragment {
 
             String[] weatherData = null;
             try {
-                weatherData = getWeatherDataFromJson(forecastJsonStr, 7);
+                weatherData = getWeatherDataFromJson(forecastJsonStr, 7, units);
             } catch (JSONException e) {
                 Log.e("ForecastFragment", "Could not parse JSON:" + forecastJsonStr);
             }
@@ -292,12 +319,12 @@ public class ForecastFragment extends Fragment {
 
         @Override
         protected void onPostExecute(String[] weatherData) {
-           if (weatherData != null) {
-               mForeCastAdapter.clear();
-               for(String data: weatherData) {
-                   mForeCastAdapter.add(data);
-               }
-           }
+            if (weatherData != null) {
+                mForeCastAdapter.clear();
+                for (String data : weatherData) {
+                    mForeCastAdapter.add(data);
+                }
+            }
         }
     }
 }

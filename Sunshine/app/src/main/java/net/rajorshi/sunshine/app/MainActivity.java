@@ -1,6 +1,10 @@
 package net.rajorshi.sunshine.app;
 
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -36,9 +40,22 @@ public class MainActivity extends ActionBarActivity {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
-            return true;
+            Intent settingsIntent = new Intent(getApplicationContext(), SettingsActivity.class);
+            startActivity(settingsIntent);
         }
 
+        if (id == R.id.action_view) {
+            SharedPreferences preferences =
+                    PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+            String location = preferences.getString(getString(R.string.pref_location_key),
+                    getString(R.string.pref_location_default));
+            Uri uri = Uri.parse("geo:0,0?q=" + location);
+            Intent mapIntent = new Intent(Intent.ACTION_VIEW);
+            mapIntent.setData(uri);
+            if (mapIntent.resolveActivity(getPackageManager()) != null) {
+                startActivity(mapIntent);
+            }
+        }
         return super.onOptionsItemSelected(item);
     }
 
