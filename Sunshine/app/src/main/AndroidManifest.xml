@@ -34,6 +34,10 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="net.rajorshi.sunshine.app.MainActivity" />
         </activity>
+        <provider
+            android:authorities="net.rajorshi.sunshine.app"
+            android:name=".data.WeatherProvider" />
     </application>
+   
 
 </manifest>
