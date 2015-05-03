@@ -6,14 +6,48 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v7.app.ActionBarActivity;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
 
 public class MainActivity extends ActionBarActivity {
 
+    private static final String LOG_TAG = ActionBarActivity.class.getSimpleName();
+
+    @Override
+    protected void onPause() {
+        Log.d(LOG_TAG, "Lifecycle: onPause");
+        super.onPause();
+    }
+
+    @Override
+    protected void onStop() {
+        Log.d(LOG_TAG, "Lifecycle: onStop");
+        super.onStop();
+    }
+
+    @Override
+    protected void onResume() {
+        Log.d(LOG_TAG, "Lifecycle: onResume");
+        super.onResume();
+    }
+
+    @Override
+    protected void onStart() {
+        Log.d(LOG_TAG, "Lifecycle: onStart");
+        super.onStart();
+    }
+
+    @Override
+    protected void onDestroy() {
+        Log.d(LOG_TAG, "Lifecycle: onDestroy");
+        super.onDestroy();
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.d(LOG_TAG, "Lifecycle: onCreate");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         if (savedInstanceState == null) {
