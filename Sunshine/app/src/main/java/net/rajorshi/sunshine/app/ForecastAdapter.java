@@ -19,6 +19,13 @@ public class ForecastAdapter extends CursorAdapter {
     private static final int VIEW_TYPE_TODAY = 0;
     private static final int VIEW_TYPE_FUTURE_DAY = 1;
 
+    // Flag to determine if we want to use a separate view for "today".
+    private boolean mUseTodayLayout = true;
+
+    public void setUseTodayLayout(boolean useTodayLayout) {
+        mUseTodayLayout = useTodayLayout;
+    }
+
     /**
      * Cache of the children views for a forecast list item.
      */
@@ -100,6 +107,9 @@ public class ForecastAdapter extends CursorAdapter {
         // Read user preference for metric or imperial temperature units
         boolean isMetric = Utility.isMetric(context);
 
+        // For accessibility, add a content description to the icon field
+        viewHolder.iconView.setContentDescription(description);
+
         // Read high temperature from cursor
         double high = cursor.getDouble(ForecastFragment.COL_WEATHER_MAX_TEMP);
         viewHolder.highTempView.setText(Utility.formatTemperature(context, high, isMetric));
@@ -111,7 +121,7 @@ public class ForecastAdapter extends CursorAdapter {
 
     @Override
     public int getItemViewType(int position) {
-        return position == 0 ? VIEW_TYPE_TODAY : VIEW_TYPE_FUTURE_DAY;
+        return (position == 0 && mUseTodayLayout) ? VIEW_TYPE_TODAY : VIEW_TYPE_FUTURE_DAY;
     }
 
     @Override
